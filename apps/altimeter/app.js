@@ -10,6 +10,7 @@ var avr = [];
 var updateDisplay = true;
 var timeoutID;
 let queueMillis = 0;
+let queueCount = 0;
 
 function fmt(t) {
   if ((t > -100) && (t < 1000))
@@ -22,12 +23,18 @@ function fmt(t) {
 // windup timer if screen is locked
 function windup() {
   if (queueMillis > 0) {
-    Bangle.setBarometerPower(false, "altimeter");
-    if (timeoutID) clearTimeout(timeoutID);
-    timeoutID = setTimeout(function() {
-      timeoutID = undefined;
-      Bangle.setBarometerPower(true, "altimeter");
-    }, queueMillis - (Date.now() % queueMillis));
+    if (queueCount > 0)
+      queueCount--;
+    else {
+      Bangle.setBarometerPower(false, "altimeter");
+      if (timeoutID)
+        clearTimeout(timeoutID);
+      timeoutID = setTimeout(function() {
+        timeoutID = undefined;
+        Bangle.setBarometerPower(true, "altimeter");
+        queueCount = 20;
+      }, queueMillis - (Date.now() % queueMillis));
+    }
   }
 }
 
@@ -93,8 +100,9 @@ function start() {
 function updateState () {
   if ((Bangle.isLocked())) {
     queueMillis = 60000;
-
-  } else {
+    queueCount = 0;
+  }
+  else {
     queueMillis = 0;
     Bangle.setBarometerPower(true, "altimeter");
   }
